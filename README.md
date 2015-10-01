@@ -31,3 +31,19 @@ Modbus.modbus_close(ctx)
 # Free memory allocated to context
 Modbus.modbus_free(ctx)
 ```
+
+# Tests
+
+I have used the java program [ModbusPal](http://modbuspal.sourceforge.net/) to
+ simulate a slave on localhost. The first registers of the slave is made to
+ increment from 0 to 65535 and cycle.
+
+## ModbusPal setup
+
+![alt tag](https://raw.githubusercontent.com/nkottary/Modbus.jl/master/screenshots/ModbusPalSetup.png)
+
+## Julia output
+
+![alt tag](https://raw.githubusercontent.com/nkottary/Modbus.jl/master/screenshots/JuliaOutput.png)
+
+

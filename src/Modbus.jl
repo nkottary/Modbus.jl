@@ -35,6 +35,8 @@ The Modbus context type.
 """
 typealias ModbusCtx Ptr{Void}
 
+const MODBUS_TCP_DEFAULT_PORT = 502
+
 """
 Returns a `ModbusCtx` object given the `ip` address and the `port`. Default 
 `port` is `MODBUS_TCP_DEFAULT_PORT` (502).
@@ -53,6 +55,18 @@ function modbus_new_tcp(ip::String, port=MODBUS_TCP_DEFAULT_PORT)
 end
 
 """
+Set the slave unit id `slave`.
+"""
+function modbus_set_slave(ctx::ModbusCtx, slave)
+    c_slave = convert(Cint, slave)
+    status = ccall((:modbus_set_slave, "libmodbus"), Cint, (ModbusCtx, Cint, ),
+                   ctx, c_slave)
+    if (status == -1)
+        error("`modbus_set_slave` failed. Returned -1.")
+    end
+end
+
+"""
 Connects the backend of the modbus context `ctx`.
 """
 function modbus_connect(ctx::ModbusCtx)
@@ -68,11 +82,13 @@ Reads the holding registers of remote device and puts the data into an array.
  `addr` is the address of the starting register. `nb` is the number of registers
  to read. Returns a julia array containing the read data.
 """
-function modbus_read_registers(ctx::ModbusCtx, addr::Cint, nb::Cint, dest)
+function modbus_read_registers(ctx::ModbusCtx, addr, nb)
+    c_addr = convert(Cint, addr)
+    c_nb = convert(Cint, nb)
     dest = Array(Cushort, nb)
     status = ccall((:modbus_read_registers, "libmodbus"), Cint,
                    (ModbusCtx, Cint, Cint, Ptr{Cushort}, ),
-                   ctx, addr, nb, pointer(dest))
+                   ctx, c_addr, c_nb, pointer(dest))
 
     if (status == -1)
         error("`modbus_read_registers` failed. Returned -1.")
@@ -91,7 +107,7 @@ end
 """
 Free the memory allocated to `ctx` by `modbus_new_tcp`.
 """
-function modbus_free()
+function modbus_free(ctx::ModbusCtx)
     ccall((:modbus_free, "libmodbus"), Void, (ModbusCtx, ), ctx)
 end
 
