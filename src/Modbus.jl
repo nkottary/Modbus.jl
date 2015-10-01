@@ -85,7 +85,7 @@ Reads the holding registers of remote device and puts the data into an array.
 function modbus_read_registers(ctx::ModbusCtx, addr, nb)
     c_addr = convert(Cint, addr)
     c_nb = convert(Cint, nb)
-    dest = Array(Cushort, nb)
+    dest = zeros(Cushort, nb)
     status = ccall((:modbus_read_registers, "libmodbus"), Cint,
                    (ModbusCtx, Cint, Cint, Ptr{Cushort}, ),
                    ctx, c_addr, c_nb, pointer(dest))
