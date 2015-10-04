@@ -148,7 +148,7 @@ function modbus_convert_regs(regs::Array{Register}, typ::DataType,
         for i = 1:4:length(regs)
             lsbl = convert(Culong, regs[i])
             lsbh = convert(Culong, regs[i+1])
-            msbl = convert(Culong, regs[i])
+            msbl = convert(Culong, regs[i+2])
             msbh = convert(Culong, regs[i+3])
 
             if (endian == MODBUS_LITTLE_ENDIAN)
