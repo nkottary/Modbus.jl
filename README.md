@@ -14,22 +14,25 @@ Pkg.clone("https://github.com/nkottary/Modbus.jl")
 
 ```
 # Create a modbus context with the necessary data.
-ctx = Modbus.modbus_new_tcp("192.168.0.109", 502)
+ctx = modbus_new_tcp("192.168.0.109", 502)
+
+# Set the slave unit ID. This is optional, default is 255.
+modbus_set_slave(ctx, 1)
 
 # Start the connection.
-Modbus.modbus_connect(ctx)
+modbus_connect(ctx)
 
 # Read 10 registers from address 2999
-dest = Modbus.modbus_read_registers(ctx, 2999, 10)
+dest = modbus_read_registers(ctx, 2999, 10)
 
 # Show the data recieved
 @show dest
 
 # Close the connection
-Modbus.modbus_close(ctx)
+modbus_close(ctx)
 
 # Free memory allocated to context
-Modbus.modbus_free(ctx)
+modbus_free(ctx)
 ```
 
 # Tests
@@ -45,5 +48,3 @@ I have used the java program [ModbusPal](http://modbuspal.sourceforge.net/) to
 ## Julia output
 
 ![alt tag](https://raw.githubusercontent.com/nkottary/Modbus.jl/master/screenshots/JuliaOutput.png)
-
-
