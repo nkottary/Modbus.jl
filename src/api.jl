@@ -1,6 +1,6 @@
 export modbus_new_tcp, modbus_connect, modbus_read_registers,
        modbus_close, modbus_free, modbus_set_slave, modbus_convert_regs,
-       modbus_error_handler
+       modbus_error_handler, modbus_set_response_timeout
 
 """
 Returns a `ModbusCtx` object given the `ip` address and the `port`. Default 
@@ -72,6 +72,9 @@ function modbus_free(ctx::ModbusCtx)
 end
 
 """
+A handy wrapper to modbus_strerror() that also passes the libc errno to it.
+ Raises an error if `condition` is true and prints the message `msg` followed
+ by the output string of modbus_strerror.
 """
 function modbus_error_handler(condition, msg)
     if condition
@@ -81,6 +84,18 @@ function modbus_error_handler(condition, msg)
                                          Ptr{Cchar}, (Cint, ), errno))
         error(errstr * "\nModbus Error: " * modbus_errstr)
     end
+end
+
+"""
+Set response timeout in seconds and micro seconds.
+"""
+function modbus_set_response_timeout(ctx::ModbusCtx, to_sec, to_usec)
+    c_sec = convert(Cuint, to_sec)
+    c_usec = convert(Cuint, to_usec)
+    status = ccall((:modbus_set_response_timeout, "libmodbus"), Cint,
+                   (ModbusCtx, Cuint, Cuint), ctx, c_sec, c_usec)
+    modbus_error_handler(status == -1,
+                         "`modbus_set_response_timeout` failed.")
 end
 
 """
@@ -105,14 +120,21 @@ function modbus_convert_regs(regs::Array{Register}, typ::DataType,
 
     elseif nbytes == 4 # Cint, Cuint or Cfloat
         if (length(regs) % 2) != 0
-            error("Size of array not a multiple of 4,2 cannot convert to $typ")
+            error("Size of array not a multiple of 4, cannot convert to $typ")
         end
 
-        ret_arr = Array(typ, convert(Int, trunc(length(regs) / 2)))
+        ret_arr = Array(typ, length(regs) >> 1)
 
         for i = 1:2:length(regs)
-             val = reinterpret(typ, (convert(Cuint, regs[i]) << 16)
-                                     | convert(Cuint, regs[i+1]))
+             lsb = convert(Cuint, regs[i])
+             msb = convert(Cuint, regs[i+1])
+
+             if (endian == MODBUS_LITTLE_ENDIAN)
+                 val = reinterpret(typ, (lsb << 16) | msb)
+             else
+                 val = reinterpret(typ, (msb << 16) | lsb)
+             end
+
              ret_arr[convert(Int, trunc(i/2)) + 1] = val
         end
 
@@ -120,14 +142,24 @@ function modbus_convert_regs(regs::Array{Register}, typ::DataType,
         if (length(regs) % 4) != 0
             error("Size of array not a multiple of 4, cannot convert to $typ")
         end
-        ret_arr = Array(typ, convert(Int, trunc(length(regs) / 4)))
+
+        ret_arr = Array(typ, length(regs) >> 2)
 
         for i = 1:4:length(regs)
-            ret_arr[convert(Int, trunc(i/4)) + 1] = reinterpret(typ, 
-                                           (convert(Culong, regs[i]) << 48) | 
-                                           (convert(Culong, regs[i+1]) << 32) |
-                                           (convert(Culong, regs[i]) << 16) |
-                                           convert(Culong, regs[i+3]))
+            lsbl = convert(Culong, regs[i])
+            lsbh = convert(Culong, regs[i+1])
+            msbl = convert(Culong, regs[i])
+            msbh = convert(Culong, regs[i+3])
+
+            if (endian == MODBUS_LITTLE_ENDIAN)
+                val = reinterpret(typ, (lsbl << 48) | (lsbh << 32) |
+                                  (msbl << 16) | msbh)
+            else
+                val = reinterpret(typ, (msbh << 48) | (msbl << 32) |
+                                  (lsbh << 16) | lsbl)
+            end
+
+            ret_arr[convert(Int, trunc(i/4)) + 1] = val
         end
 
     else

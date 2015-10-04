@@ -9,6 +9,7 @@ const NUM_REGS = 2
 function basic_test()
     ctx = modbus_new_tcp(IP_ADDR, PORT)
     modbus_set_slave(ctx, UNIT_ID)
+    modbus_set_response_timeout(ctx, 0, 750000)
     modbus_connect(ctx)
     
     for i=1:10

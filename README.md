@@ -16,8 +16,15 @@ Pkg.clone("https://github.com/nkottary/Modbus.jl")
 # Create a modbus context with the necessary data.
 ctx = modbus_new_tcp("192.168.0.109", 502)
 
-# Set the slave unit ID. This is optional, default is 255.
+# Optional attributes to set
+
+# Set the slave unit ID, default is 255.
 modbus_set_slave(ctx, 1)
+
+# Set the response timeout to 0.75 seconds, default is 0.5 seconds
+modbus_set_response_timeout(ctx, 0, 750000)
+
+# ~~~ End of optional attributes
 
 # Start the connection.
 modbus_connect(ctx)
