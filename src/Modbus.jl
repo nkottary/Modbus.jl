@@ -3,6 +3,10 @@ Modbus.jl is an interface to the [libmodbus](http://www.libmodbus.org) C library
 """
 module Modbus
 
+export MODBUS_TCP_DEFAULT_PORT,
+       modbus_new_tcp, modbus_connect, modbus_read_registers,
+       modbus_close, modbus_free, modbus_set_slave, modbus_convert_regs
+
 """
 Mirror of `struct timeval` found in sys/time.h.
 """
@@ -35,6 +39,14 @@ The Modbus context type.
 """
 typealias ModbusCtx Ptr{Void}
 
+"""
+The register type: 16-bit
+"""
+typealias Register Cushort
+
+"""
+Default port number for Modbus TCP.
+"""
 const MODBUS_TCP_DEFAULT_PORT = 502
 
 """
@@ -85,9 +97,9 @@ Reads the holding registers of remote device and puts the data into an array.
 function modbus_read_registers(ctx::ModbusCtx, addr, nb)
     c_addr = convert(Cint, addr)
     c_nb = convert(Cint, nb)
-    dest = zeros(Cushort, nb)
+    dest = zeros(Register, nb)
     status = ccall((:modbus_read_registers, "libmodbus"), Cint,
-                   (ModbusCtx, Cint, Cint, Ptr{Cushort}, ),
+                   (ModbusCtx, Cint, Cint, Ptr{Register}, ),
                    ctx, c_addr, c_nb, pointer(dest))
 
     if (status == -1)
@@ -109,6 +121,59 @@ Free the memory allocated to `ctx` by `modbus_new_tcp`.
 """
 function modbus_free(ctx::ModbusCtx)
     ccall((:modbus_free, "libmodbus"), Void, (ModbusCtx, ), ctx)
+end
+
+"""
+Return an array whose elements are of type `typ` given the 16-bit
+ register array `regs`.
+"""
+function modbus_convert_regs(regs::Array{Register}, typ::DataType)
+    nbytes = sizeof(typ)
+    ret_arr = None
+
+    if nbytes == 1 # Cchar or Cuchar
+        ret_arr = Array(typ, length(regs) * 2)
+
+        for i = 1:length(regs)
+            ret_arr[2*i - 1] = convert(typ, regs[i] >> 8) # MSB
+            ret_arr[2*i] = convert(typ, regs[i]) # LSB
+        end
+
+    elseif nbytes == 2 # Cshort, Cushort or Float16
+        return map(x -> reinterpret(typ, x), regs)
+
+    elseif nbytes == 4 # Cint, Cuint or Cfloat
+        if (length(regs) % 2) != 0
+            error("Size of array not a multiple of 4,2 cannot convert to $typ")
+        end
+
+        ret_arr = Array(typ, convert(Int, trunc(length(regs) / 2)))
+
+        for i = 1:2:length(regs)
+             val = reinterpret(typ, (convert(Cuint, regs[i]) << 16)
+                                     | convert(Cuint, regs[i+1]))
+             ret_arr[convert(Int, trunc(i/2)) + 1] = val
+        end
+
+    elseif nbytes == 8 # Clong, Culong or Cdouble
+        if (length(regs) % 4) != 0
+            error("Size of array not a multiple of 4, cannot convert to $typ")
+        end
+        ret_arr = Array(typ, convert(Int, trunc(length(regs) / 4)))
+
+        for i = 1:4:length(regs)
+            ret_arr[convert(Int, trunc(i/4)) + 1] = reinterpret(typ, 
+                                           (convert(Culong, regs[i]) << 48) | 
+                                           (convert(Culong, regs[i+1]) << 32) |
+                                           (convert(Culong, regs[i]) << 16) |
+                                           convert(Culong, regs[i+3]))
+        end
+
+    else
+        error("`get_regs_as` type $typ not supported!")
+    end
+
+    return ret_arr
 end
 
 end # end module
