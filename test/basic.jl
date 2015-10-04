@@ -7,15 +7,15 @@ const REF_ADDR = 1
 const NUM_REGS = 1
 
 function basic_test()
-    ctx = Modbus.modbus_new_tcp(IP_ADDR, PORT)
-    Modbus.modbus_set_slave(ctx, UNIT_ID)
-    Modbus.modbus_connect(ctx)
+    ctx = modbus_new_tcp(IP_ADDR, PORT)
+    modbus_set_slave(ctx, UNIT_ID)
+    modbus_connect(ctx)
     
-    dest = Modbus.modbus_read_registers(ctx, REF_ADDR, NUM_REGS)
+    dest = modbus_read_registers(ctx, REF_ADDR, NUM_REGS)
     @show dest
     
-    Modbus.modbus_close(ctx)
-    Modbus.modbus_free(ctx)
+    modbus_close(ctx)
+    modbus_free(ctx)
 end
 
 basic_test()
