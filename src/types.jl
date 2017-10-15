@@ -30,9 +30,9 @@ end
 """
 The Modbus context type.
 """
-typealias ModbusCtx Ptr{Void}
+const ModbusCtx = Ptr{Void}
 
 """
 The register type: 16-bit
 """
-typealias Register Cushort
+const Register = Cushort
